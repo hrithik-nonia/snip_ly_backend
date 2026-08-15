@@ -9,7 +9,7 @@ from app.utils.helper_methods import helper_methods
 
 class UserBaseClass(BaseModel):
   email : EmailStr
-  password : Annotated[str, Field(min_length= 8 , max_length= 50)]
+  password : str
 
   @field_validator("email")
   @classmethod

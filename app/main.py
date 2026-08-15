@@ -1,6 +1,7 @@
 # built in imports
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
+from fastapi.middleware.cors import CORSMiddleware
 
 # custom imports
 from app.routes.auth.user_auth import router as auth_router
@@ -28,6 +29,15 @@ app = FastAPI(title="Snip Ly",
               debug=True, 
               version="1.0.0",
               lifespan= lifespan)
+
+
+app.add_middleware(
+  CORSMiddleware,
+  allow_origins=["http://localhost:5173"],
+  allow_credentials=True,
+  allow_methods=["*"],
+  allow_headers=["*"],
+)
 
 
 # register auth route
