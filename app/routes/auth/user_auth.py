@@ -1,8 +1,8 @@
 # built in imports
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status, Response
 
 # custom imports
-from app.models.user import CreateUser, RegisterResponse
+from app.models.user import CreateUser, RegisterResponse, VerifyOtp, UserBaseClass, UserResponse
 from app.services.auth_service.auth_services import user_auth_services
 
 
@@ -17,5 +17,11 @@ async def signup(user_data: CreateUser):
 
 # otp
 @router.post("/otp", status_code= status.HTTP_200_OK, description="Verify Otp." , response_model= RegisterResponse)
-async def otp(otp: str, email: str):
-  return await user_auth_services.verify_otp(otp, email)
+async def otp(data: VerifyOtp):
+  return await user_auth_services.verify_otp(data.otp, data.email)
+
+
+@router.post("/login", status_code= status.HTTP_200_OK, description= "login", response_model= UserResponse)
+async def login(login_data : UserBaseClass, response: Response):
+  return await user_auth_services.login(login_data, response)
+

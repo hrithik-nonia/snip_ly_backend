@@ -31,19 +31,23 @@ class CreateUser(UserBaseClass):
 
 
 class UserResponse(BaseModel):
+    """ response after signup """
     id: str
     username: str
     email: str
     created_at: datetime
+    access_token: str
+    token_type: str
+    
 
 class RegisterResponse(BaseModel):
+    """ response after register """
     success: bool
     message: str
-    user: UserResponse
+    user_email: EmailStr 
 
 
-class UserStoreData(BaseModel):
-   """ user data which is store in DB """
-   email : EmailStr
-   hashed_password : str
-   created_at : datetime
+class VerifyOtp(BaseModel):
+    """ otp verify schema """
+    otp: str
+    email: str

@@ -15,9 +15,10 @@ class UserAuthRepo:
     return await otps_collection.find_one({"email" : email})
 
 
-  async def save_temp_user(self, email: str, otp: str, hashed_password: str):
+  async def save_temp_user(self, email: str, otp: str, hashed_password: str, name : str):
     """ save temperary user data """
     await otps_collection.insert_one({
+        "name": name,
         "email": email,
         "otp": otp,
         "hashed_password": hashed_password,
@@ -26,8 +27,9 @@ class UserAuthRepo:
 
   
   # OTP verify hone ke baad permanent save
-  async def create_user(self, email: str, hashed_password: str):
+  async def create_user(self, email: str, hashed_password: str, name: str):
     result = await users_collection.insert_one({
+        "name": name,
         "email": email,
         "hashed_password": hashed_password,
         "created_at": datetime.now(timezone.utc)
