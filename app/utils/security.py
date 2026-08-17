@@ -1,9 +1,11 @@
 # built in imports
 from pwdlib import PasswordHash
 from datetime import datetime, timezone, timedelta
-from jose import jwt
+from jose import jwt, JWTError
 import os
 from dotenv import load_dotenv
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, status
 
 load_dotenv()
 
@@ -39,3 +41,32 @@ def create_refresh_token(data: dict) -> str:
     expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     payload.update({"exp": expire, "type": "refresh"})
     return jwt.encode(payload, REFRESH_SECRET_KEY, algorithm=ALGORITHM)
+
+
+# ======= token dependency=============
+bearer_scheme = HTTPBearer()  # token ko read karne ke liya
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> dict:
+   token = credentials.credentials
+   try:
+      payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])  # payload nikala isme user id v set kiya tha
+      user_id: str = payload.get("sub")  # payload se user id nikala 
+      if not user_id:
+          raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+      return {"user_id": user_id}
+
+   except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+
+async def get_optional_user(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))) -> dict | None:
+    if not credentials:
+        return None
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        return {"user_id": user_id}
+    except:
+        return None
+    
