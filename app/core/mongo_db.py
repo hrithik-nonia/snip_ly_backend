@@ -15,3 +15,4 @@ database = client[DB_NAME]
 # collections
 users_collection = database["users"]
 otps_collection = database["otps"]
+links_collection = database["links"]
