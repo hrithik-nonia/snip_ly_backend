@@ -3,6 +3,7 @@ from datetime import timezone, timedelta, datetime
 import os
 from dotenv import load_dotenv
 from fastapi.responses import RedirectResponse
+from fastapi import Request
 
 load_dotenv()
 
@@ -10,6 +11,7 @@ load_dotenv()
 from app.repositories.url_repository.url_repository import url_repository
 from app.models.url_model import CreateLink
 from app.utils.shortcode import generate_short_code
+from app.services.url_service.click_service import click_service
 
 
 BASE_URL = os.getenv("BASE_URL")
@@ -60,7 +62,7 @@ class UrlService:
     }
     
 
-  async def redirect_url(self, short_code: str):
+  async def get_and_track(self, short_code: str, request: Request):
     url = await self.url_repo.find_by_url(short_code)
 
     if not url or not url["is_active"]:
@@ -71,6 +73,10 @@ class UrlService:
     if url["expires_at"].replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         return RedirectResponse(url="http://localhost:5173/linkExpiry410Page")
 
+    # ✅ click track karo — asyncio se background mein chalao
+    import asyncio
+    asyncio.create_task(click_service.track_click(short_code, request))
+    
     return RedirectResponse(url=url["original_url"])
    
      
