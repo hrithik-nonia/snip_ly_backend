@@ -194,5 +194,25 @@ class UserAuthServices:
         "access_token": new_access_token,
         "token_type": "bearer",
     }
-    
+
+
+  async def logout(self, refresh_token: str, response: Response) -> dict:
+    # Cookie clear karo
+    response.delete_cookie(
+        key="refresh_token",
+        path="/"
+    )
+
+    if not refresh_token:
+        return {"message": "Logged out"}
+
+    # Token decode karo — user_id nikalo
+    payload = decode_token(refresh_token)
+    user_id = payload.get("sub")
+
+    # DB se refresh token delete karo
+    if user_id:
+        await self.user_auth_repo.update_refresh_token(user_id, None)
+
+    return {"message": "Logged out successfully"}
 user_auth_services = UserAuthServices()
