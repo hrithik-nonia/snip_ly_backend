@@ -15,6 +15,9 @@ class UrlRepository:
             "original_url": original_url,
             "user_id": user_id
         })
+
+    async def find_by_url(self, short_code: str):
+        return await links_collection.find_one({"short_code": short_code})
     
 
 

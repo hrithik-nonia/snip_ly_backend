@@ -1,6 +1,8 @@
 # built in imports
 from datetime import datetime, timezone
-
+from typing import Optional
+from bson import ObjectId
+from bson.errors import InvalidId
 
 # custom imports
 from app.core.mongo_db import users_collection, otps_collection
@@ -40,6 +42,21 @@ class UserAuthRepo:
   # OTP verify hone ke baad temp delete karo
   async def delete_temp_user(self, email: str):
     await otps_collection.delete_one({"email": email})
+
+
+  async def find_by_id(self, user_id: str) -> Optional[dict]:
+      try:
+          user = await users_collection.find_one({"_id": ObjectId(user_id)})
+          return user
+      except InvalidId:
+          return None
+
+  # set refresh token 
+  async def update_refresh_token(self, user_id: str, refresh_token: str) -> None:
+      await users_collection.update_one(
+          {"_id": ObjectId(user_id)},
+          {"$set": {"refresh_token": refresh_token}}
+      )
 
 
 

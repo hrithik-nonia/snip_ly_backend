@@ -15,3 +15,4 @@ router = APIRouter(prefix="/url", tags=["URL Routes"])
 async def short_url(link_data: CreateLink, current_user: dict | None = Depends(get_optional_user)):
     user_id = current_user["user_id"] if current_user else None
     return await url_service.create_link(link_data, user_id)
+

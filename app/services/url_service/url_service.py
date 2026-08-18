@@ -2,6 +2,7 @@
 from datetime import timezone, timedelta, datetime
 import os
 from dotenv import load_dotenv
+from fastapi.responses import RedirectResponse
 
 load_dotenv()
 
@@ -59,6 +60,20 @@ class UrlService:
     }
     
 
+  async def redirect_url(self, short_code: str):
+    url = await self.url_repo.find_by_url(short_code)
+
+    if not url or not url["is_active"]:
+        return RedirectResponse(url="http://localhost:5173/notFoundPage")
+
+    # expiry check
+    from datetime import datetime, timezone
+    if url["expires_at"].replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        return RedirectResponse(url="http://localhost:5173/linkExpiry410Page")
+
+    return RedirectResponse(url=url["original_url"])
+   
+     
 url_service = UrlService()
 
   

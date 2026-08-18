@@ -1,7 +1,7 @@
 # built in imports
 from pwdlib import PasswordHash
 from datetime import datetime, timezone, timedelta
-from jose import jwt, JWTError
+from jose import jwt, JWTError, JWSError
 import os
 from dotenv import load_dotenv
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -41,6 +41,19 @@ def create_refresh_token(data: dict) -> str:
     expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     payload.update({"exp": expire, "type": "refresh"})
     return jwt.encode(payload, REFRESH_SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_token(token: str) -> dict:
+    try:
+        payload = jwt.decode(
+            token, REFRESH_SECRET_KEY, algorithms=[ALGORITHM]
+        )
+        return payload
+    except JWTError:
+        raise HTTPException(  # ← None ki jagah exception raise karo
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token"
+        )
 
 
 # ======= token dependency=============

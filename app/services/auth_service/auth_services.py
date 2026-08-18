@@ -4,7 +4,7 @@ from fastapi import HTTPException, status, Response
 # built in imports
 from app.models.user import CreateUser, UserBaseClass
 from app.repositories.auth_repo.user_auth_repository import user_auth_repository
-from app.utils.security import hash_password, verify_password, create_access_token, create_refresh_token
+from app.utils.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from app.core.email import generate_otp, send_otp
 
 
@@ -109,15 +109,20 @@ class UserAuthServices:
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
 
+    await self.user_auth_repo.update_refresh_token(
+        str(existing_user["_id"]),
+        refresh_token
+    )
+
     # 5. Refresh token → HttpOnly cookie mein daal do
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,        # JS se access nahi hoga (XSS safe)
-        secure=True,          # Sirf HTTPS pe jayega
+        secure=False,          # Sirf HTTPS pe jayega
         samesite="lax",       # CSRF protection
         max_age=60 * 60 * 24 * 7,  # 7 din (seconds mein)
-        path="/auth/refresh"  # Sirf refresh endpoint pe jayega
+        path="/"  # Sirf refresh endpoint pe jayega
     )
 
     # 6. Access token → response body mein bhejo
@@ -132,4 +137,62 @@ class UserAuthServices:
     }
     
 
+  async def refresh(self, refresh_token: str, response: Response) -> dict:
+    # Step 1: Decode karo — invalid hoga toh exception aayega
+    payload = decode_token(refresh_token)
+
+    # Step 2: Refresh token type confirm karo
+    if payload.get("type") != "refresh":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Token"
+        )
+
+    # Step 3: user_id nikalo
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Token"
+        )
+
+    # Step 4: DB se user nikalo
+    user = await self.user_auth_repo.find_by_id(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+
+    # Step 5: DB mein stored token se match karo
+    if user.get("refresh_token") != refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Token"
+        )
+
+    # Step 6: Naye tokens banao
+    token_payload = {"sub": user_id, "email": user["email"]}
+    new_access_token = create_access_token(token_payload)
+    new_refresh_token = create_refresh_token(token_payload)
+
+    # Step 7: Naya refresh token DB mein save karo
+    await self.user_auth_repo.update_refresh_token(user_id, new_refresh_token)
+
+    # Step 8: Cookie update karo
+    response.set_cookie(
+        key="refresh_token",
+        value=new_refresh_token,
+        httponly=True,
+        secure=False,         # ← development
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,
+        path="/"
+    )
+
+    return {
+        "access_token": new_access_token,
+        "token_type": "bearer",
+    }
+    
 user_auth_services = UserAuthServices()
