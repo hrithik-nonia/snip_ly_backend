@@ -16,3 +16,6 @@ async def short_url(link_data: CreateLink, current_user: dict | None = Depends(g
     user_id = current_user["user_id"] if current_user else None
     return await url_service.create_link(link_data, user_id)
 
+@router.get("/home_stats_data")
+async def home_stats_data():
+    return await url_service.home_stats_data()

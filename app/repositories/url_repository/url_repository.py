@@ -18,6 +18,9 @@ class UrlRepository:
 
     async def find_by_url(self, short_code: str):
         return await links_collection.find_one({"short_code": short_code})
+
+    async def total_links_count(self)-> int:
+        return await links_collection.count_documents({})
     
 
 

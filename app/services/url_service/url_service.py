@@ -12,6 +12,7 @@ from app.repositories.url_repository.url_repository import url_repository
 from app.models.url_model import CreateLink
 from app.utils.shortcode import generate_short_code
 from app.services.url_service.click_service import click_service
+from app.repositories.url_repository.click_repository import click_repository
 
 
 BASE_URL = os.getenv("BASE_URL")
@@ -19,6 +20,7 @@ BASE_URL = os.getenv("BASE_URL")
 class UrlService:
   def __init__(self):
     self.url_repo = url_repository
+    self.click_repo = click_repository
 
 
   async def create_link(self, link_data: CreateLink, user_id: str | None = None) -> dict:
@@ -78,7 +80,18 @@ class UrlService:
     asyncio.create_task(click_service.track_click(short_code, request))
     
     return RedirectResponse(url=url["original_url"])
-   
+
+
+  async def home_stats_data(self)-> dict:
+     clicks = await self.click_repo.get_dashboard_stats()
+
+     # links collection se - alag query
+     total_links = await self.url_repo.total_links_count()
+
+     return {
+        "clicks": clicks,
+        "total_links":total_links
+     }
      
 url_service = UrlService()
 
