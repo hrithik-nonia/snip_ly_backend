@@ -3,13 +3,13 @@ from datetime import timezone, timedelta, datetime
 import os
 from dotenv import load_dotenv
 from fastapi.responses import RedirectResponse
-from fastapi import Request
+from fastapi import Request, HTTPException, status
 
 load_dotenv()
 
 # custom imports
 from app.repositories.url_repository.url_repository import url_repository
-from app.models.url_model import CreateLink
+from app.models.url_model import CreateLink, CreateUrlSchema
 from app.utils.shortcode import generate_short_code
 from app.services.url_service.click_service import click_service
 from app.repositories.url_repository.click_repository import click_repository
@@ -92,6 +92,37 @@ class UrlService:
         "clicks": clicks,
         "total_links":total_links
      }
+
+
+  async def create_short_url(self, data: CreateUrlSchema, user_id: str)-> dict:
+    # custom alias check
+    if data.custom_alias:
+        existing = await self.url_repo.find_existing_alias(data.custom_alias)
+        if existing:
+            raise HTTPException(status_code= status.HTTP_409_CONFLICT, detail="Alias already taken")
+        short_code = data.custom_alias
+    else:
+        short_code = generate_short_code()
+
+    expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+
+    link_data_dict = {
+       "user_id": user_id,
+       "original_url": str(data.original_url),
+       "short_code": short_code,
+       "expires_at": expires_at,
+       "created_at": datetime.now(timezone.utc),
+       "is_active": True
+    }
+
+    await self.url_repo.create_link(link_data_dict)
+
+    return {
+        "success": True,
+        "short_url": f"{BASE_URL}/{short_code}",
+        "original_url": data.original_url,
+        "expires_at": expires_at
+    }
      
 url_service = UrlService()
 

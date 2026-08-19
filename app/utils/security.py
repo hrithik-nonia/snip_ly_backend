@@ -55,6 +55,13 @@ def decode_token(token: str) -> dict:
             detail="Invalid or expired refresh token"
         )
 
+def decode_access_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired access token")
+
 
 # ======= token dependency=============
 bearer_scheme = HTTPBearer()  # token ko read karne ke liya

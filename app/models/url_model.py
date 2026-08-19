@@ -1,5 +1,5 @@
 # built in imports
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, Field
 from typing import Optional
 from datetime import datetime
 
@@ -9,7 +9,6 @@ from datetime import datetime
 
 class CreateLink(BaseModel):
     original_url: HttpUrl
-    custom_alias: Optional[str] = None
 
 class ClickData:
     def __init__(
@@ -40,3 +39,13 @@ class ClickData:
             "referer": self.referer,
             "clicked_at": self.clicked_at,
         }
+
+
+class CreateUrlSchema(BaseModel):
+    original_url: HttpUrl
+    custom_alias: Optional[str] = Field(
+        default=None,
+        min_length=3,
+        max_length=50,
+        pattern=r"^[a-zA-Z0-9-_]+$"  
+    )
