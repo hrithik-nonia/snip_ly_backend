@@ -2,7 +2,7 @@
 
 
 # custom imports
-from app.core.mongo_db import links_collection
+from app.core.mongo_db import links_collection, clicks_collection
 
 
 class UrlRepository:
@@ -29,6 +29,27 @@ class UrlRepository:
     # find alias
     async def find_existing_alias(self, alias: str):
         return await links_collection.find_one({"short_code": alias})
+
+    # user dashboard stats
+    async def get_user_dashboard_stats(self, user_id: str) -> dict:
+        """ user ke dashboard ka data deta hai """
+        # total links
+        total_links = await links_collection.count_documents({"user_id": user_id})
+    
+        # active links
+        active_links = await links_collection.count_documents({
+            "user_id": user_id,
+            "is_active": True
+        })
+    
+        # total clicks
+        total_clicks = await clicks_collection.count_documents({"user_id": user_id})
+
+        return {
+            "total_links": total_links,
+            "active_links": active_links,
+            "total_clicks": total_clicks,
+        }
     
     
 

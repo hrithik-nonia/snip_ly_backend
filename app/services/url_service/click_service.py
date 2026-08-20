@@ -2,11 +2,13 @@
 import httpx
 from datetime import datetime, timezone
 from fastapi import Request
+from bson import ObjectId
 
 
 # custom imports
 from app.repositories.url_repository.click_repository import click_repository
 from app.models.url_model import ClickData
+from app.core.mongo_db import links_collection
 
 
 class ClickService:
@@ -43,7 +45,12 @@ class ClickService:
 
         location = await self.get_location(ip)
 
+        # link banane wale ka user_id nikalo
+        link = await links_collection.find_one({"short_code": short_code})
+        user_id = link["user_id"] if link else None
+
         click = ClickData(
+            user_id= user_id,
             short_code=short_code,
             ip=ip,
             country=location["country"],

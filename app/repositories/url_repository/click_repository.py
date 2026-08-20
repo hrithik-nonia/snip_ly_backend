@@ -16,6 +16,7 @@ class ClickRepository:
         return await clicks_collection.count_documents({"short_code": short_code})
 
   async def get_dashboard_stats(self) -> dict:
+    """ iss method se home page ka stats data milega """
     pipeline = [
         {
             "$group": {

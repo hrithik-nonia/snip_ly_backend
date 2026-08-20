@@ -2,6 +2,7 @@
 from pydantic import BaseModel, HttpUrl, Field
 from typing import Optional
 from datetime import datetime
+from bson import ObjectId
 
 
 # custom imports
@@ -13,6 +14,7 @@ class CreateLink(BaseModel):
 class ClickData:
     def __init__(
         self,
+        user_id: ObjectId,
         short_code: str,
         ip: str,
         country: str,
@@ -21,6 +23,7 @@ class ClickData:
         referer: Optional[str],
         clicked_at: datetime,
     ):
+        self.user_id = user_id
         self.short_code = short_code
         self.ip = ip
         self.country = country
@@ -31,6 +34,7 @@ class ClickData:
 
     def to_dict(self) -> dict:
         return {
+            "user_id": self.user_id,
             "short_code": self.short_code,
             "ip": self.ip,
             "country": self.country,

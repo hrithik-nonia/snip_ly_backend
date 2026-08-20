@@ -93,7 +93,7 @@ class UrlService:
         "total_links":total_links
      }
 
-
+#   logged in user ke liya only
   async def create_short_url(self, data: CreateUrlSchema, user_id: str)-> dict:
     # custom alias check
     if data.custom_alias:
@@ -123,7 +123,11 @@ class UrlService:
         "original_url": data.original_url,
         "expires_at": expires_at
     }
+
+
+  async def get_user_links_data(user_id: str)->dict:
      
+     return None
 url_service = UrlService()
 
   
