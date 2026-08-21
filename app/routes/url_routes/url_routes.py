@@ -33,3 +33,9 @@ async def create_short_url(data: CreateUrlSchema,
 async def get_user_data(page: int = 1, limit: int = 5, search: str= "", current_user = Depends(get_current_user)):
     user_id = str(current_user["_id"])
     return await url_service.get_user_links_data(user_id, page, limit, search)
+
+# delete link
+@router.delete("/delete")
+async def delete_link(short_code: str, current_user = Depends(get_current_user)):
+    user_id = str(current_user["_id"])
+    return await url_service.delete_link(user_id, short_code)

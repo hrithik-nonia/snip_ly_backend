@@ -14,6 +14,7 @@ from app.models.url_model import CreateLink, CreateUrlSchema
 from app.utils.shortcode import generate_short_code
 from app.services.url_service.click_service import click_service
 from app.repositories.url_repository.click_repository import click_repository
+from app.repositories.auth_repo.user_auth_repository import user_auth_repository
 
 
 BASE_URL = os.getenv("BASE_URL")
@@ -22,6 +23,7 @@ class UrlService:
   def __init__(self):
     self.url_repo = url_repository
     self.click_repo = click_repository
+    self.user_auth_repo = user_auth_repository
 
 
   async def create_link(self, link_data: CreateLink, user_id: str | None = None) -> dict:
@@ -139,6 +141,19 @@ class UrlService:
         "links": links,
         "BASE_URL": BASE_URL
     }
+
+
+  async def delete_link(self , user_id: str, short_code: str)-> dict | None:
+    is_user_exist = await self.user_auth_repo.find_by_id(user_id)
+
+    if not is_user_exist :
+       HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail= "Palhe Register Kro Phir Delete Karna")
+
+    result = await self.url_repo.delete_link(short_code)
+
+    return result
+
+  
 url_service = UrlService()
 
   

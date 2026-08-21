@@ -101,7 +101,20 @@ class UrlRepository:
                 link["user_id"] = str(link["user_id"])
 
         return {"links": links}
-    
+
+
+    # delete link
+    async def delete_link(self, short_code: str)-> dict | None:
+        delete_from_link_collection = await links_collection.delete_one({"short_code": short_code})
+
+        await clicks_collection.delete_many({"short_code": short_code})
+
+        if delete_from_link_collection.deleted_count == 0:
+            return None  # link mila hi nahi
+        
+        return {"message": "Link deleted successfully",
+                "short_code": short_code
+                }
 
 
 url_repository = UrlRepository()
