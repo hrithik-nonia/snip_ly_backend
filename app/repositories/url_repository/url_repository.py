@@ -1,5 +1,6 @@
 # built in imports
 from math import ceil
+from datetime import datetime, timezone, timedelta
 
 
 # custom imports
@@ -115,6 +116,189 @@ class UrlRepository:
         return {"message": "Link deleted successfully",
                 "short_code": short_code
                 }
+
+
+    # get link by short code
+    async def get_link_analytics(self, short_code: str) -> dict | None:
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+
+        pipeline = [
+            # Step 1: link dhundo
+            {"$match": {"short_code": short_code}},
+
+            # Step 2: clicks join karo
+            {"$lookup": {
+                "from": "clicks",
+                "localField": "short_code",
+                "foreignField": "short_code",
+                "as": "click_data"
+            }},
+
+            # Step 3: sab calculate karo
+            {"$addFields": {
+
+                # total clicks
+                "total_clicks": {"$size": "$click_data"},
+
+                # todays clicks
+                "todays_clicks": {
+                    "$size": {
+                        "$filter": {
+                            "input": "$click_data",
+                            "as": "click",
+                            "cond": {"$gte": ["$$click.clicked_at", today_start]}
+                        }
+                    }
+                },
+
+                # unique visitors — distinct IPs
+                "unique_visitors": {
+                    "$size": {"$setUnion": "$click_data.ip"}
+                },
+
+                # top countries
+                "top_countries": {
+                    "$reduce": {
+                        "input": "$click_data",
+                        "initialValue": [],
+                        "in": {
+                            "$let": {
+                                "vars": {
+                                    "country": "$$this.country",
+                                    "arr": "$$value"
+                                },
+                                "in": {
+                                    "$cond": {
+                                        "if": {"$in": ["$$country", "$$arr.country"]},
+                                        "then": {
+                                            "$map": {
+                                                "input": "$$arr",
+                                                "as": "item",
+                                                "in": {
+                                                    "$cond": {
+                                                        "if": {"$eq": ["$$item.country", "$$country"]},
+                                                        "then": {
+                                                            "country": "$$item.country",
+                                                            "count": {"$add": ["$$item.count", 1]}
+                                                        },
+                                                        "else": "$$item"
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "else": {
+                                            "$concatArrays": [
+                                                "$$arr",
+                                                [{"country": "$$country", "count": 1}]
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+
+                # device breakdown
+                "device_breakdown": {
+                    "$reduce": {
+                        "input": "$click_data",
+                        "initialValue": {"Mobile": 0, "Tablet": 0, "Desktop": 0},
+                        "in": {
+                            "$let": {
+                                "vars": {
+                                    "device": {
+                                        "$switch": {
+                                            "branches": [
+                                                {
+                                                    "case": {"$regexMatch": {
+                                                        "input": "$$this.user_agent",
+                                                        "regex": "Mobile|Android",
+                                                        "options": "i"
+                                                    }},
+                                                    "then": "Mobile"
+                                                },
+                                                {
+                                                    "case": {"$regexMatch": {
+                                                        "input": "$$this.user_agent",
+                                                        "regex": "iPad|Tablet",
+                                                        "options": "i"
+                                                    }},
+                                                    "then": "Tablet"
+                                                }
+                                            ],
+                                            "default": "Desktop"
+                                        }
+                                    }
+                                },
+                                "in": {
+                                    "Mobile": {
+                                        "$cond": [{"$eq": ["$$device", "Mobile"]},
+                                            {"$add": ["$$value.Mobile", 1]}, "$$value.Mobile"]
+                                    },
+                                    "Tablet": {
+                                        "$cond": [{"$eq": ["$$device", "Tablet"]},
+                                            {"$add": ["$$value.Tablet", 1]}, "$$value.Tablet"]
+                                    },
+                                    "Desktop": {
+                                        "$cond": [{"$eq": ["$$device", "Desktop"]},
+                                            {"$add": ["$$value.Desktop", 1]}, "$$value.Desktop"]
+                                    },
+                                }
+                            }
+                        }
+                    }
+                },
+
+                # recent clicks — last 10
+                "recent_clicks": {
+                    "$slice": [
+                        {"$sortArray": {
+                            "input": "$click_data",
+                            "sortBy": {"clicked_at": -1}
+                        }},
+                        10
+                    ]
+                },
+
+                # clicks over time — last 30 days
+                "clicks_over_time": {
+                    "$filter": {
+                        "input": "$click_data",
+                        "as": "click",
+                        "cond": {"$gte": ["$$click.clicked_at", thirty_days_ago]}
+                    }
+                },
+            }},
+
+            # Step 4: click_data remove karo
+            {"$project": {"click_data": 0}},
+        ]
+
+        result = await links_collection.aggregate(pipeline).to_list(length=1)
+
+        if not result:
+            return None
+
+        link = result[0]
+        link["_id"] = str(link["_id"])
+        if link.get("user_id"):
+            link["user_id"] = str(link["user_id"])
+
+        # recent_clicks convert
+        for click in link.get("recent_clicks", []):
+            click["_id"] = str(click["_id"])
+            if click.get("user_id"):
+                click["user_id"] = str(click["user_id"])
+
+        # clicks_over_time convert — yeh missing tha
+        for click in link.get("clicks_over_time", []):
+            click["_id"] = str(click["_id"])
+            if click.get("user_id"):
+                click["user_id"] = str(click["user_id"])
+
+        return link
 
 
 url_repository = UrlRepository()

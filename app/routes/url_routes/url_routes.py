@@ -39,3 +39,10 @@ async def get_user_data(page: int = 1, limit: int = 5, search: str= "", current_
 async def delete_link(short_code: str, current_user = Depends(get_current_user)):
     user_id = str(current_user["_id"])
     return await url_service.delete_link(user_id, short_code)
+
+
+# get analytics page data
+@router.get("/link_analytics")
+async def get_link_analytics_data(short_code: str, current_user = Depends(get_current_user)):
+    
+    return await url_service.get_analytics_data( short_code)

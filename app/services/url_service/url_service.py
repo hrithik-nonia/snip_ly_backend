@@ -147,12 +147,16 @@ class UrlService:
     is_user_exist = await self.user_auth_repo.find_by_id(user_id)
 
     if not is_user_exist :
-       HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail= "Palhe Register Kro Phir Delete Karna")
+       raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail= "Palhe Register Kro Phir Delete Karna")
 
     result = await self.url_repo.delete_link(short_code)
 
     return result
 
+
+  async def get_analytics_data(self, short_code: str)-> dict |None:
+    result = await self.url_repo.get_link_analytics(short_code)
+    return result
   
 url_service = UrlService()
 
