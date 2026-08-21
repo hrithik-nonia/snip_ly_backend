@@ -30,6 +30,6 @@ async def create_short_url(data: CreateUrlSchema,
 
 # get a specific users links and stats
 @router.get("/get_user_data")
-async def get_user_data(current_user = Depends(get_current_user)):
+async def get_user_data(page: int = 1, limit: int = 5, search: str= "", current_user = Depends(get_current_user)):
     user_id = str(current_user["_id"])
-    return await url_service.get_user_links_data(user_id)
+    return await url_service.get_user_links_data(user_id, page, limit, search)

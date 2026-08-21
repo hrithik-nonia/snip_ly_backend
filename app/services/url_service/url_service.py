@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from fastapi.responses import RedirectResponse
 from fastapi import Request, HTTPException, status
 
+
 load_dotenv()
 
 # custom imports
@@ -125,9 +126,19 @@ class UrlService:
     }
 
 
-  async def get_user_links_data(user_id: str)->dict:
+  async def get_user_links_data(self, user_id: str , page: int = 1, limit: int = 5, search: str="")->dict:
+     if not user_id:
+        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail= "User Not Found")
      
-     return None
+     stats_data = await self.url_repo.get_user_dashboard_stats(user_id)
+
+     links = await self.url_repo.get_user_links(user_id , page, limit, search)
+     
+     return {
+        "stats": stats_data,
+        "links": links,
+        "BASE_URL": BASE_URL
+    }
 url_service = UrlService()
 
   

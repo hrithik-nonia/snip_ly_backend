@@ -1,4 +1,5 @@
 # built in imports
+from math import ceil
 
 
 # custom imports
@@ -50,7 +51,56 @@ class UrlRepository:
             "active_links": active_links,
             "total_clicks": total_clicks,
         }
-    
+
+
+    # get links with pagination
+    async def get_user_links(self, user_id: str, page: int = 1, limit: int = 5, search: str = "") -> dict:
+        skip = (page - 1) * limit  # page 1 → skip 0, page 2 → skip 5
+
+        # for search feature
+        search_filter = {"user_id": user_id}
+        if search:
+            search_filter["$or"] = [
+                {"original_url": {"$regex": search, "$options": "i"}},
+                {"short_code": {"$regex": search, "$options": "i"}},
+            ]
+
+        total_count = await links_collection.count_documents(search_filter)
+
+        pipeline = [
+            # Step 1: sirf is user ke links
+            {"$match": search_filter},
+
+            # Step 2: clicks collection se join karo short_code pe
+            {"$lookup": {
+                "from": "clicks",
+                "localField": "short_code",
+                "foreignField": "short_code",
+                "as": "click_data"
+            }},
+
+            # Step 3: click_data array ki size = total clicks
+            {"$addFields": {
+                "clicks": {"$size": "$click_data"}
+            }},
+
+            # Step 4: click_data remove karo
+            {"$project": {"click_data": 0}},
+
+            # Step 5: pagination
+            {"$skip": skip},
+            {"$limit": limit},
+        ]
+
+        links = await links_collection.aggregate(pipeline).to_list(length=None)
+
+        # ObjectId → string
+        for link in links:
+            link["_id"] = str(link["_id"])
+            if link.get("user_id"):
+                link["user_id"] = str(link["user_id"])
+
+        return {"links": links}
     
 
 
